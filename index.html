@@ -3,171 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>PENJUALAN OKTSHOP17 (Cloud)</title>
+    <title>PENJUALAN OKTSHOP17 - Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // --- KONFIGURASI FIREBASE ANDA ---
-        // Ganti dengan konfigurasi dari Firebase Console Anda
-        const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "oktshop17.firebaseapp.com",
-            projectId: "oktshop17",
-            storageBucket: "oktshop17.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const salesCol = collection(db, "penjualan");
-
-        // Global state
-        let allData = [];
-
-        // Fungsi Rupiah
-        window.rupiah = (n) => "Rp" + Number(n).toLocaleString("id-ID");
-
-        // Render Data Otomatis (Realtime)
-        onSnapshot(query(salesCol, orderBy("tanggal", "desc")), (snapshot) => {
-            allData = [];
-            let tBoci = 0;
-            let tCireng = 0;
-            
-            snapshot.forEach((doc) => {
-                const item = doc.data();
-                allData.push(item);
-                tBoci += Number(item.boci);
-                tCireng += Number(item.cireng);
-            });
-
-            document.getElementById("totalBoci").innerText = rupiah(tBoci);
-            document.getElementById("totalCireng").innerText = rupiah(tCireng);
-            document.getElementById("totalSemua").innerText = rupiah(tBoci + tCireng);
-            renderList(allData.slice(0, 5)); // Tampilkan 5 terakhir di UI
-        });
-
-        function renderList(items) {
-            const listDiv = document.getElementById("recentSales");
-            listDiv.innerHTML = items.map(i => `
-                <div style="font-size:12px; border-bottom:1px solid #eee; padding:5px 0;">
-                    ${i.tanggal} - Boci: ${rupiah(i.boci)} | Cireng: ${rupiah(i.cireng)}
-                </div>
-            `).join('');
-        }
-
-        // Fungsi Simpan
-        window.simpan = async () => {
-            const btn = document.getElementById("btnSimpan");
-            const tanggal = document.getElementById("tanggal").value;
-            const boci = Number(document.getElementById("boci").value || 0);
-            const cireng = Number(document.getElementById("cireng").value || 0);
-
-            if(!tanggal) return alert("Pilih tanggal!");
-            
-            btn.disabled = true;
-            btn.innerText = "Menyimpan...";
-
-            try {
-                await addDoc(salesCol, { 
-                    tanggal, 
-                    boci, 
-                    cireng,
-                    createdAt: new Date().toISOString() 
-                });
-                document.getElementById("boci").value = "";
-                document.getElementById("cireng").value = "";
-                alert("Data tersimpan ke Cloud!");
-            } catch (e) {
-                alert("Error: " + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Simpan Data";
-            }
-        };
-
-        // Fungsi PDF
-        window.downloadPDF = async () => {
-            const from = document.getElementById("fromDate").value;
-            const to = document.getElementById("toDate").value;
-            if(!from || !to) return alert("Pilih rentang tanggal!");
-
-            const q = query(salesCol, where("tanggal", ">=", from), where("tanggal", "<=", to));
-            const querySnapshot = await getDocs(q);
-            const dataFilter = [];
-            querySnapshot.forEach(doc => dataFilter.push(doc.data()));
-
-            if(dataFilter.length === 0) return alert("Tidak ada data di periode ini");
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("REKAP PENJUALAN OKTSHOP17", 10, 20);
-            doc.text(`Periode: ${from} - ${to}`, 10, 30);
-            
-            let y = 45;
-            let total = 0;
-            dataFilter.sort((a,b) => a.tanggal.localeCompare(b.tanggal)).forEach(d => {
-                let sub = d.boci + d.cireng;
-                total += sub;
-                doc.text(`${d.tanggal} | B: ${rupiah(d.boci)} | C: ${rupiah(d.cireng)} | Sub: ${rupiah(sub)}`, 10, y);
-                y += 10;
-            });
-            doc.text(`GRAND TOTAL: ${rupiah(total)}`, 10, y+10);
-            doc.save(`Laporan_${from}_${to}.pdf`);
-        };
-    </script>
-
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { margin: 0; background: linear-gradient(135deg, #ffe0b2, #f8bbd0); min-height: 100vh; padding: 15px; display: flex; justify-content: center; }
-        .wrap { width: 100%; max-width: 450px; background: white; padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #e65100; border-bottom: 2px solid #ffccbc; padding-bottom: 10px; }
-        label { display: block; font-size: 13px; font-weight: bold; margin-top: 15px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; margin-top: 5px; }
-        button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; color: #fff; margin-top: 15px; cursor: pointer; background: linear-gradient(90deg, #ff5722, #ff9800); }
-        button.secondary { background: #512da8; }
-        .card { background: #fdfdfd; padding: 15px; border-radius: 15px; margin-top: 20px; border: 1px solid #eee; }
-        .total-grand { font-weight: bold; font-size: 18px; margin-top: 10px; border-top: 2px dashed #ddd; color: #d84315; display: flex; justify-content: space-between; }
+        /* Style tetap sama dengan versi sebelumnya */
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: linear-gradient(135deg, #ffe0b2, #ffccbc, #f8bbd0); min-height: 100vh; padding: 15px; display: flex; justify-content: center; }
+        .wrap { width: 100%; max-width: 450px; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        h1 { margin: 0 0 20px; text-align: center; font-size: 22px; color: #e65100; border-bottom: 2px solid #ffccbc; padding-bottom: 10px; }
+        label { display: block; font-size: 13px; font-weight: bold; margin-top: 15px; color: #555; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; margin-top: 5px; outline: none; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; font-size: 15px; color: #fff; margin-top: 15px; cursor: pointer; transition: 0.3s; background: linear-gradient(90deg, #ff5722, #ff9800); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.secondary { background: linear-gradient(90deg, #1976d2, #512da8); }
+        .card { background: #fff; padding: 15px; border-radius: 15px; margin-top: 20px; border: 1px solid #eee; }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .total-grand { font-weight: bold; font-size: 18px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed #ddd; color: #d84315; display: flex; justify-content: space-between; }
+        .loading-text { font-size: 12px; color: #e65100; text-align: center; display: none; }
     </style>
 </head>
 <body>
 <div class="wrap">
-    <h1>OKTSHOP17 ☁️</h1>
+    <h1>OKTSHOP17 (Cloud)</h1>
 
     <label>Tanggal Transaksi</label>
     <input type="date" id="tanggal">
 
-    <label>Waroeng Boci (Rp)</label>
+    <label>Penjualan Waroeng Boci (Rp)</label>
     <input type="number" id="boci" placeholder="0">
 
-    <label>Lapak Cireng (Rp)</label>
+    <label>Penjualan Lapak Cireng (Rp)</label>
     <input type="number" id="cireng" placeholder="0">
 
-    <button id="btnSimpan" onclick="simpan()">Simpan Data</button>
+    <button id="btnSimpan">Simpan ke Cloud</button>
+    <div id="status" class="loading-text">Menyimpan...</div>
 
     <div class="card">
-        <div id="recentSales" style="margin-bottom: 10px;"></div>
-        <div style="display: flex; justify-content: space-between;"><span>Boci:</span> <span id="totalBoci">Rp0</span></div>
-        <div style="display: flex; justify-content: space-between;"><span>Cireng:</span> <span id="totalCireng">Rp0</span></div>
+        <div class="total-row"><span>Waroeng Boci:</span> <span id="totalBoci">Rp0</span></div>
+        <div class="total-row"><span>Lapak Cireng:</span> <span id="totalCireng">Rp0</span></div>
         <div class="total-grand"><span>TOTAL:</span> <span id="totalSemua">Rp0</span></div>
     </div>
 
     <div class="card">
-        <h3 style="margin: 0 0 10px 0; font-size: 16px;">Cetak PDF</h3>
+        <h3 style="font-size: 16px; margin-top: 0;">Cetak Laporan PDF</h3>
+        <label>Dari Tanggal</label>
         <input type="date" id="fromDate">
+        <label>Sampai Tanggal</label>
         <input type="date" id="toDate">
-        <button class="secondary" onclick="downloadPDF()">Download PDF</button>
+        <button class="secondary" id="btnDownload">Download Rekap (.pdf)</button>
     </div>
 </div>
 
-<script>
-    // Set default date
+<!-- Firebase SDK Modern (Modular) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // --- KONFIGURASI FIREBASE ANDA ---
+    // Ganti dengan kode yang Anda dapatkan dari Firebase Console
+    const firebaseConfig = {
+        apiKey: "AIzaSy...",
+        authDomain: "oktshop17.firebaseapp.com",
+        databaseURL: "https://oktshop17-default-rtdb.firebaseio.com",
+        projectId: "oktshop17",
+        storageBucket: "oktshop17.appspot.com",
+        messagingSenderId: "...",
+        appId: "..."
+    };
+
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, 'penjualan');
+
+    let allData = [];
+
+    // Set Default Tanggal
     document.getElementById('tanggal').valueAsDate = new Date();
     document.getElementById('fromDate').valueAsDate = new Date();
     document.getElementById('toDate').valueAsDate = new Date();
+
+    function rupiah(n){
+        return "Rp" + Number(n).toLocaleString("id-ID");
+    }
+
+    // Listener Realtime: Mengambil data otomatis jika ada perubahan di cloud
+    onValue(dbRef, (snapshot) => {
+        const data = snapshot.val();
+        allData = [];
+        let totalBoci = 0;
+        let totalCireng = 0;
+
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                allData.push(item);
+                totalBoci += Number(item.boci || 0);
+                totalCireng += Number(item.cireng || 0);
+            });
+        }
+
+        document.getElementById("totalBoci").innerText = rupiah(totalBoci);
+        document.getElementById("totalCireng").innerText = rupiah(totalCireng);
+        document.getElementById("totalSemua").innerText = rupiah(totalBoci + totalCireng);
+    });
+
+    // Fungsi Simpan ke Firebase
+    window.simpan = async () => {
+        const btn = document.getElementById("btnSimpan");
+        const status = document.getElementById("status");
+        const tanggal = document.getElementById("tanggal").value;
+        const boci = Number(document.getElementById("boci").value || 0);
+        const cireng = Number(document.getElementById("cireng").value || 0);
+
+        if(!tanggal) return alert("Pilih tanggal!");
+
+        btn.disabled = true;
+        status.style.display = "block";
+
+        try {
+            await push(dbRef, { tanggal, boci, cireng, createdAt: new Date().toISOString() });
+            document.getElementById("boci").value = "";
+            document.getElementById("cireng").value = "";
+            alert("Berhasil disimpan ke Cloud!");
+        } catch (e) {
+            alert("Gagal simpan: " + e.message);
+        } finally {
+            btn.disabled = false;
+            status.style.display = "none";
+        }
+    };
+
+    // Fungsi Download PDF
+    window.downloadPDF = () => {
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const filtered = allData.filter(x => x.tanggal >= from && x.tanggal <= to)
+                                .sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+        doc.setFontSize(18);
+        doc.text("REKAP PENJUALAN OKTSHOP17", 10, 20);
+        doc.setFontSize(11);
+        doc.text(`Periode: ${from} s/d ${to}`, 10, 28);
+        doc.line(10, 32, 200, 32);
+
+        let y = 45;
+        doc.setFont(undefined, 'bold');
+        doc.text("Tanggal", 10, y);
+        doc.text("Boci", 50, y);
+        doc.text("Cireng", 90, y);
+        doc.text("Subtotal", 130, y);
+        doc.setFont(undefined, 'normal');
+
+        y += 10;
+        let grandTotal = 0;
+
+        filtered.forEach(d => {
+            let sub = Number(d.boci) + Number(d.cireng);
+            grandTotal += sub;
+            doc.text(d.tanggal, 10, y);
+            doc.text(rupiah(d.boci), 50, y);
+            doc.text(rupiah(d.cireng), 90, y);
+            doc.text(rupiah(sub), 130, y);
+            y += 8;
+            if(y > 270) { doc.addPage(); y = 20; }
+        });
+
+        doc.setFont(undefined, 'bold');
+        doc.text("GRAND TOTAL: " + rupiah(grandTotal), 10, y + 10);
+        doc.save(`Rekap_OKTSHOP17_${from}_to_${to}.pdf`);
+    };
+
+    // Attach event listeners
+    document.getElementById("btnSimpan").onclick = window.simpan;
+    document.getElementById("btnDownload").onclick = window.downloadPDF;
 </script>
 </body>
 </html>
