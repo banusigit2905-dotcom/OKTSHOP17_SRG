@@ -6,7 +6,6 @@
     <title>PENJUALAN OKTSHOP17 - Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* Style tetap sama dengan versi sebelumnya */
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { margin: 0; background: linear-gradient(135deg, #ffe0b2, #ffccbc, #f8bbd0); min-height: 100vh; padding: 15px; display: flex; justify-content: center; }
         .wrap { width: 100%; max-width: 450px; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
@@ -19,7 +18,7 @@
         .card { background: #fff; padding: 15px; border-radius: 15px; margin-top: 20px; border: 1px solid #eee; }
         .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
         .total-grand { font-weight: bold; font-size: 18px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed #ddd; color: #d84315; display: flex; justify-content: space-between; }
-        .loading-text { font-size: 12px; color: #e65100; text-align: center; display: none; }
+        .loading-text { font-size: 12px; color: #e65100; text-align: center; display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -36,12 +35,12 @@
     <input type="number" id="cireng" placeholder="0">
 
     <button id="btnSimpan">Simpan ke Cloud</button>
-    <div id="status" class="loading-text">Menyimpan...</div>
+    <div id="status" class="loading-text">Menyimpan data...</div>
 
     <div class="card">
         <div class="total-row"><span>Waroeng Boci:</span> <span id="totalBoci">Rp0</span></div>
         <div class="total-row"><span>Lapak Cireng:</span> <span id="totalCireng">Rp0</span></div>
-        <div class="total-grand"><span>TOTAL:</span> <span id="totalSemua">Rp0</span></div>
+        <div class="total-grand"><span>GRAND TOTAL:</span> <span id="totalSemua">Rp0</span></div>
     </div>
 
     <div class="card">
@@ -54,22 +53,19 @@
     </div>
 </div>
 
-<!-- Firebase SDK Modern (Modular) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // --- KONFIGURASI FIREBASE ANDA ---
-    // Ganti dengan kode yang Anda dapatkan dari Firebase Console
+    // --- KONFIGURASI FIREBASE (SUDAH DIPERBAIKI) ---
     const firebaseConfig = {
-  apiKey: "AIzaSyDCwm30g0G0RiPc1Qq8EZGB-4s_TS8oUC8",
-  authDomain: "oktshop17srg-77563278-5a16b.firebaseapp.com",
-  databaseURL: "https://oktshop17srg-77563278-5a16b-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "oktshop17srg-77563278-5a16b",
-  storageBucket: "oktshop17srg-77563278-5a16b.firebasestorage.app",
-  messagingSenderId: "383895713061",
-  appId: "1:383895713061:web:c10ed7c8f8e083e1ba96cc"
-};
+        apiKey: "AIzaSyDCwm30g0G0RiPc1Qq8EZGB-4s_TS8oUC8",
+        authDomain: "oktshop17srg-77563278-5a16b.firebaseapp.com",
+        databaseURL: "https://oktshop17srg-77563278-5a16b-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "oktshop17srg-77563278-5a16b",
+        storageBucket: "oktshop17srg-77563278-5a16b.firebasestorage.app",
+        messagingSenderId: "383895713061",
+        appId: "1:383895713061:web:c10ed7c8f8e083e1ba96cc"
     };
 
     // Inisialisasi Firebase
@@ -79,16 +75,17 @@
 
     let allData = [];
 
-    // Set Default Tanggal
-    document.getElementById('tanggal').valueAsDate = new Date();
-    document.getElementById('fromDate').valueAsDate = new Date();
-    document.getElementById('toDate').valueAsDate = new Date();
+    // Set Default Tanggal ke Hari Ini
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('tanggal').value = today;
+    document.getElementById('fromDate').value = today;
+    document.getElementById('toDate').value = today;
 
     function rupiah(n){
         return "Rp" + Number(n).toLocaleString("id-ID");
     }
 
-    // Listener Realtime: Mengambil data otomatis jika ada perubahan di cloud
+    // LISTENER REALTIME: Mengupdate Tampilan Total secara otomatis
     onValue(dbRef, (snapshot) => {
         const data = snapshot.val();
         allData = [];
@@ -99,17 +96,20 @@
             Object.keys(data).forEach(key => {
                 const item = data[key];
                 allData.push(item);
+                // Pastikan dijumlahkan sebagai angka
                 totalBoci += Number(item.boci || 0);
                 totalCireng += Number(item.cireng || 0);
             });
         }
 
+        // Update UI
         document.getElementById("totalBoci").innerText = rupiah(totalBoci);
         document.getElementById("totalCireng").innerText = rupiah(totalCireng);
         document.getElementById("totalSemua").innerText = rupiah(totalBoci + totalCireng);
+        console.log("Data diperbarui dari Cloud. Total:", totalBoci + totalCireng);
     });
 
-    // Fungsi Simpan ke Firebase
+    // FUNGSI SIMPAN
     window.simpan = async () => {
         const btn = document.getElementById("btnSimpan");
         const status = document.getElementById("status");
@@ -117,17 +117,28 @@
         const boci = Number(document.getElementById("boci").value || 0);
         const cireng = Number(document.getElementById("cireng").value || 0);
 
-        if(!tanggal) return alert("Pilih tanggal!");
+        if(!tanggal) {
+            alert("Silakan pilih tanggal!");
+            return;
+        }
 
         btn.disabled = true;
         status.style.display = "block";
 
         try {
-            await push(dbRef, { tanggal, boci, cireng, createdAt: new Date().toISOString() });
+            await push(dbRef, { 
+                tanggal, 
+                boci, 
+                cireng, 
+                createdAt: new Date().toISOString() 
+            });
+            
+            // Reset input boci & cireng saja, tanggal tetap
             document.getElementById("boci").value = "";
             document.getElementById("cireng").value = "";
             alert("Berhasil disimpan ke Cloud!");
         } catch (e) {
+            console.error(e);
             alert("Gagal simpan: " + e.message);
         } finally {
             btn.disabled = false;
@@ -135,15 +146,20 @@
         }
     };
 
-    // Fungsi Download PDF
+    // FUNGSI DOWNLOAD PDF
     window.downloadPDF = () => {
         const from = document.getElementById("fromDate").value;
         const to = document.getElementById("toDate").value;
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        
+        if(!from || !to) return alert("Pilih rentang tanggal!");
 
         const filtered = allData.filter(x => x.tanggal >= from && x.tanggal <= to)
                                 .sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+        if(filtered.length === 0) return alert("Tidak ada data di tanggal tersebut.");
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
 
         doc.setFontSize(18);
         doc.text("REKAP PENJUALAN OKTSHOP17", 10, 20);
@@ -174,11 +190,12 @@
         });
 
         doc.setFont(undefined, 'bold');
+        doc.line(10, y, 200, y);
         doc.text("GRAND TOTAL: " + rupiah(grandTotal), 10, y + 10);
         doc.save(`Rekap_OKTSHOP17_${from}_to_${to}.pdf`);
     };
 
-    // Attach event listeners
+    // Pasang Event Listener ke tombol
     document.getElementById("btnSimpan").onclick = window.simpan;
     document.getElementById("btnDownload").onclick = window.downloadPDF;
 </script>
